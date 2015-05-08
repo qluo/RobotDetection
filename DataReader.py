@@ -6,8 +6,18 @@ from Bidder import Bidder
 
 from sys import argv
 import time
+import numpy as np
 
-def read_bidders_info(input_name, is_train):
+def load_csv(input_name):
+    data = list()
+    csv_reader = csv.reader(open(input_name, 'rb'))
+    header = csv_reader.next()
+    for row in csv_reader:
+        data.append(row)
+    data = np.array(data)
+    return header,data
+
+def load_bidders_info(input_name, is_train):
     bidders_dict = dict()
     num_column = 3
     if is_train:
@@ -29,22 +39,9 @@ def read_bidders_info(input_name, is_train):
     print("Finished loading %d bidders" % len(bidders_dict.keys()))
     return bidders_dict
 
-def bids_generator(input_name):
-    with open(input_name, 'rb') as csv_file:
-        reader = csv.reader(csv_file, delimiter=',')
-        for line in reader:
-            if len(line)!=9 or line[0] == 'bid_id':
-                continue
-            id = line[0]
-            bidder_id = line[1]
-            auction = line[2]
-            merchandise = line[3]
-            device = line[4]
-            time = line[5]
-            country = line[6]
-            ip = line[7]
-            url = line[8]
-            yield (id, bidder_id, auction, merchandise, device, time, country, ip, url)
+def load_bids_info(input_name):
+    header, data = load_csv(input_name)
+    return header, data
 
 def set_bids_to_bidders(bidders_dict, bids_file_name):
     counter = 0
@@ -56,23 +53,27 @@ def set_bids_to_bidders(bidders_dict, bids_file_name):
     print("Finished adding %d bids to bidders" % counter)
     return bidders_dict
 
-def load_bids_info(input_name):
-    bids_list = list()
-    for bid in bids_generator(input_name):
-        bids_list.append(bid)
-    print("Finished loading %d bids" % len(bids_list))
-    return bids_list
+def get_unique_bids_info(input_name, output_name):
+    columns = [2,3,4,6,7]
+    header, bids_data = load_bids_info(input_name)
+    with open(output_name, 'w') as out:
+        for col in columns:
+            print("processing column: %d" % col)
+            out.write(header[col]+'\n')
+            for e in np.unique(bids_data[0::,col]).tolist():
+                out.write(e+',')
+            out.write('\n')
+    print("Finished loading info from "+input_name)
 
 def run(bidders_file_name, bids_file_name, option):
     if option == 'train':
-        bidders_dict = read_bidders_info(bidders_file_name, is_train=True)
+        bidders_dict = load_bidders_info(bidders_file_name, is_train=True)
         bidders_dict = set_bids_to_bidders(bidders_dict, bids_file_name)
         pickle.dump(bidders_dict, open('bidders_train.p', 'wb'))
-    #elif option == 'bid':
-    #    bids_list = load_bids_info(bids_file_name)
-    #    pickle.dump(bids_list, open('bids.p', 'wb'))
+    elif option == 'bid':
+        get_unique_bids_info(bids_file_name, "unique_bids_info.txt")
     elif option == 'test':
-        bidders_dict = read_bidders_info(bidders_file_name, is_train=False)
+        bidders_dict = load_bidders_info(bidders_file_name, is_train=False)
         pickle.dump(bidders_dict, open('bidders_test.p', 'wb'))
     else:
         print("This option %s is not supported" % option)

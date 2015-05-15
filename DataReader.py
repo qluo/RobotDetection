@@ -59,8 +59,10 @@ def get_unique_bids_info(input_name, output_name):
     with open(output_name, 'w') as out:
         for col in columns:
             print("processing column: %d" % col)
-            out.write(header[col]+'\n')
-            for e in np.unique(bids_data[0::,col]).tolist():
+            out.write(header[col]+',')
+            unique_info = np.unique(bids_data[0::,col]).tolist()
+            out.write(len(unique_info)+'\n')
+            for e in unique_info:
                 out.write(e+',')
             out.write('\n')
     print("Finished loading info from "+input_name)
